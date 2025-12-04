@@ -23,7 +23,7 @@ app.post("/api/summarize", async (req, res) => {
     const summary = await summarizeText(transcription, lang);
 
     console.log("Sending email...");
-    await sendEmail(email, summary);
+    await sendEmail(email, "Your summary video ", summary);
     return res.status(200).json({ message: "Summary sent to your email" });
   } catch (error) {
     console.error("Server Error:", error);

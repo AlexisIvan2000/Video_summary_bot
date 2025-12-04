@@ -5,35 +5,36 @@ import fs from "fs";
 
 export function downloadAudio(url) {
   return new Promise((resolve, reject) => {
-    
-    const filename = `${uuid()}.mp3`;
-
-    
-    const outputPath = path.join(process.cwd(), "tmp", "audio", filename);
+    const id = uuid();
+    const tmpWebm = path.join(process.cwd(), "tmp", "audio", `${id}.webm`);
+    const outputWav = path.join(process.cwd(), "tmp", "audio", `${id}.wav`);
 
    
-    const command = `yt-dlp -f bestaudio --extract-audio --audio-format mp3 --audio-quality 0 -o "${outputPath}" "${url}"`;
+    const dlCmd = `yt-dlp -f bestaudio -o "${tmpWebm}" "${url}"`;
 
-    console.log("YT-DLP command:", command);
+    console.log("Running:", dlCmd);
 
-    exec(command, (error, stdout, stderr) => {
-      if (error) {
-        console.error("yt-dlp ERROR:", stderr);
-        return reject(error);
-      }
-
-      console.log("stdout:", stdout);
-      console.log("stderr:", stderr);
-      console.log("Checking file exists:", outputPath);
+    exec(dlCmd, (err) => {
+      if (err) return reject(err);
 
     
-      if (!fs.existsSync(outputPath)) {
-        console.error(" File NOT FOUND after download:", outputPath);
-        return reject(new Error("FILE_NOT_CREATED"));
-      }
+      const convertCmd = `ffmpeg -y -i "${tmpWebm}" -ac 1 -ar 16000 -sample_fmt s16 "${outputWav}"`;
 
-      console.log("Audio file exists:", outputPath);
-      resolve(outputPath);
+      console.log("Converting to WAV:", convertCmd);
+
+      exec(convertCmd, (err2) => {
+        if (err2) return reject(err2);
+
+        if (!fs.existsSync(outputWav)) {
+          return reject(new Error("WAV_NOT_CREATED"));
+        }
+
+     
+        fs.unlinkSync(tmpWebm);
+
+        console.log("✔️ WAV created:", outputWav);
+        resolve(outputWav);
+      });
     });
   });
 }
