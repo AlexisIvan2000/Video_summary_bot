@@ -1,6 +1,6 @@
 import {ENV} from './env.js';
 
-export const BOT_CONFIG = {
+export const botConfig = {
     token: ENV.TELEGRAM_BOT_TOKEN,
     polling: true
 }

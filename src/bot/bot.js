@@ -1,7 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import { botConfig } from "../config/botConfig.js";
 import { sendSummaryRequest } from "../api/callApi.js";
-import { messages } from "../config/messages.js";
+import { messages } from "./messages.js";
 import { validateEmail, validateUrl } from "../utils/validation.js";
 
 const bot = new TelegramBot(botConfig.token, { polling: botConfig.polling });

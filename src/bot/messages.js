@@ -5,6 +5,4 @@ export const messages = {
     processing: "Processing your request, please wait...",
     invalidUrl: "The URL is invalid. Please provide a valid video link.",
     invalidEmail: "The email address you provided is not valid. Please enter a correct email address.",
-    Help: "To use this bot, simply send a video link and I will help you resume it from where you left off.",
-    About: "I am a video resuming bot created to help you continue watching videos without losing your progress.",
 }
