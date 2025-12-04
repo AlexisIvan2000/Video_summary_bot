@@ -6,4 +6,7 @@ export const ENV = {
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     API_BASE_URL: process.env.API_BASE_URL,
     DEEPGRAM_API_KEY: process.env.DEEPGRAM_API_KEY,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    GMAIL_USER: process.env.GMAIL_USER,
+    GMAIL_PASS: process.env.GMAIL_PASS,
 }
