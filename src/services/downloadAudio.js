@@ -1,40 +1,49 @@
 import { exec } from "child_process";
-import { v4 as uuid } from "uuid";
+import { promisify } from "util";
+import { fileURLToPath } from "url";
+import { v4 as uuidV4 } from "uuid";
 import path from "path";
 import fs from "fs";
 
-export function downloadAudio(url) {
-  return new Promise((resolve, reject) => {
-    const id = uuid();
-    const tmpWebm = path.join(process.cwd(), "tmp", "audio", `${id}.webm`);
-    const outputWav = path.join(process.cwd(), "tmp", "audio", `${id}.wav`);
+const execPromise = promisify(exec);
 
-   
-    const dlCmd = `yt-dlp -f bestaudio -o "${tmpWebm}" "${url}"`;
+const _filename = fileURLToPath(import.meta.url);
+const _dirname = path.dirname(_filename);
 
-    console.log("Running:", dlCmd);
+const audioDir = path.join(_dirname, "..", "tmp", "audio");
 
-    exec(dlCmd, (err) => {
-      if (err) return reject(err);
 
-    
-      const convertCmd = `ffmpeg -y -i "${tmpWebm}" -ac 1 -ar 16000 -sample_fmt s16 "${outputWav}"`;
+if (!fs.existsSync(audioDir)) {
+  fs.mkdirSync(audioDir, { recursive: true });
+}
 
-      console.log("Converting to WAV:", convertCmd);
+export async function downloadAudio(url) {
+  if (!url) throw new Error("No URL provided to downloadAudio()");
 
-      exec(convertCmd, (err2) => {
-        if (err2) return reject(err2);
+  const id = uuidV4();
+  const webmPath = path.join(audioDir, `${id}.webm`);
+  const wavPath = path.join(audioDir, `${id}.wav`);
 
-        if (!fs.existsSync(outputWav)) {
-          return reject(new Error("WAV_NOT_CREATED"));
-        }
+  
+  const ytCommand = `yt-dlp -f bestaudio --no-playlist -o "${webmPath}" "${url}"`;
 
-     
-        fs.unlinkSync(tmpWebm);
+  console.log("Running:", ytCommand);
+  await execPromise(ytCommand);
 
-        console.log("✔️ WAV created:", outputWav);
-        resolve(outputWav);
-      });
-    });
-  });
+
+  const ffmpegCommand = `ffmpeg -y -i "${webmPath}" \
+-ac 1 -ar 16000 -c:a pcm_s16le \
+"${wavPath}"`;
+
+  console.log("Converting to WAV:", ffmpegCommand);
+  await execPromise(ffmpegCommand);
+
+
+  try {
+    fs.unlinkSync(webmPath);
+  } catch (err) {
+    console.warn("Could not delete temporary .webm file:", err);
+  }
+
+  return wavPath;
 }
