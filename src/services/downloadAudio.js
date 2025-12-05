@@ -1,49 +1,64 @@
 import { exec } from "child_process";
-import { promisify } from "util";
-import { fileURLToPath } from "url";
-import { v4 as uuidV4 } from "uuid";
+import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import fs from "fs";
 
-const execPromise = promisify(exec);
-
-const _filename = fileURLToPath(import.meta.url);
-const _dirname = path.dirname(_filename);
-
-const audioDir = path.join(_dirname, "..", "tmp", "audio");
-
-
-if (!fs.existsSync(audioDir)) {
-  fs.mkdirSync(audioDir, { recursive: true });
-}
+const TMP_DIR = path.resolve("src/tmp/audio");
+if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
 
 export async function downloadAudio(url) {
-  if (!url) throw new Error("No URL provided to downloadAudio()");
+  console.log("Downloading audio...");
 
-  const id = uuidV4();
-  const webmPath = path.join(audioDir, `${id}.webm`);
-  const wavPath = path.join(audioDir, `${id}.wav`);
-
-  
-  const ytCommand = `yt-dlp -f bestaudio --no-playlist -o "${webmPath}" "${url}"`;
-
-  console.log("Running:", ytCommand);
-  await execPromise(ytCommand);
+  const id = uuidv4();
+  const webmPath = path.join(TMP_DIR, `${id}.webm`);
+  const wavPath = path.join(TMP_DIR, `${id}.wav`);
 
 
-  const ffmpegCommand = `ffmpeg -y -i "${webmPath}" \
--ac 1 -ar 16000 -c:a pcm_s16le \
-"${wavPath}"`;
-
-  console.log("Converting to WAV:", ffmpegCommand);
-  await execPromise(ffmpegCommand);
-
+  let ytCommand = `yt-dlp -f "bestaudio" --no-playlist -o "${webmPath}" "${url}"`;
 
   try {
-    fs.unlinkSync(webmPath);
+    console.log("Running:", ytCommand);
+    await execPromise(ytCommand);
   } catch (err) {
-    console.warn("Could not delete temporary .webm file:", err);
+    console.warn(" bestaudio unavailable — Falling back to best (video+audio)");
+
+    
+    ytCommand = `yt-dlp -f "best" --no-playlist -o "${webmPath}" "${url}"`;
+    await execPromise(ytCommand);
   }
 
+
+  if (!fs.existsSync(webmPath)) {
+    throw new Error("Download failed — file missing");
+  }
+  console.log(" Video downloaded:", webmPath);
+
+
+  const ffmpegCmd = `ffmpeg -y -i "${webmPath}" -ac 1 -ar 16000 -c:a pcm_s16le "${wavPath}"`;
+
+  console.log("Converting to WAV:", ffmpegCmd);
+  await execPromise(ffmpegCmd);
+
+  if (!fs.existsSync(wavPath)) {
+    throw new Error(" WAV conversion failed");
+  }
+
+  console.log("WAV created:", wavPath);
+
   return wavPath;
+}
+
+
+function execPromise(cmd) {
+  return new Promise((resolve, reject) => {
+    exec(cmd, (error, stdout, stderr) => {
+      if (stdout) console.log("stdout:", stdout);
+      if (stderr) console.log("stderr:", stderr);
+      if (error) {
+        reject(error);
+      } else {
+        resolve(stdout);
+      }
+    });
+  });
 }
